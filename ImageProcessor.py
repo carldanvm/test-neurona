@@ -5,15 +5,15 @@ class ImageProcessor:
     def __init__(self):
         self.input_dir = "imagenes-sin-procesar"
         self.output_dir = "imagenes-para-entrenar"
-        self.subdirectories = ["neumonia", "normal"]
-        self.target_size = (100, 100)
+        self.subdirectories = ["normal", "neumonia"]
+        self.target_size = (200, 200)
 
     def resize_image(self, image_path, output_path):
         try:
             image = Image.open(image_path)
             resized_image = image.resize(self.target_size)
-            pgm_image = resized_image.convert("L")
-            pgm_image.save(output_path)
+            processed_image = resized_image.convert("L")
+            processed_image.save(output_path)
         except Exception as e:
             print(f"Error procesando imagen {image_path}: {str(e)}")
         
