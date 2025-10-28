@@ -35,9 +35,8 @@ def make_prediction():
         resultado = neurona.predict(image_path)
         
         if resultado:
-            print(f"\n=== RESULTADO DE LA PREDICCIÓN ===")
-            print(f"Diagnóstico: {resultado['class'].upper()}")
-            print(f"Confianza: {resultado['confidence']:.2%}")
+            print(f"\n=== RESULTADO ===")
+            print(f"Predicción: {resultado['class']}")
             print(f"Probabilidad de neumonía: {resultado['probability']:.2%}")
         else:
             print("No se pudo procesar la imagen")
