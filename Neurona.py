@@ -15,8 +15,8 @@ class Neurona:
         self.bias1 = None     # Bias de capa oculta
         self.weights2 = None  # Pesos de capa oculta a capa de salida
         self.bias2 = None     # Bias de capa de salida
-        self.learning_rate = 0.005
-        self.hidden_size = 20  # Número de neuronas en capa oculta
+        self.learning_rate = 0.001
+        self.hidden_size = 60  # Número de neuronas en capa oculta
         self.test_accuracy = None  # Precisión en datos de test
         
         # Crear directorio para guardar modelo
@@ -191,7 +191,7 @@ class Neurona:
     
     def calculate_accuracy(self, y_true, y_pred):
         """Calcular precisión del modelo"""
-        predictions = (y_pred > 0.7).astype(int)  # Umbral cambiado a 70%
+        predictions = (y_pred > 0.5).astype(int)
         accuracy = np.mean(predictions == y_true) * 100
         return accuracy
     
@@ -257,7 +257,7 @@ class Neurona:
             cache = self.forward_propagation(image_array)
             prediction = cache['a2'][0][0]
             
-            class_name = "NEUMONIA" if prediction > 0.7 else "NORMAL"  # Umbral cambiado a 70%
+            class_name = "NEUMONIA" if prediction > 0.5 else "NORMAL"
             
             return {
                 'class': class_name,
@@ -341,7 +341,7 @@ class Neurona:
             y_pred = cache['a2'].flatten()
             
             # Calcular métricas
-            predictions = (y_pred > 0.7).astype(int)  # Umbral cambiado a 70%
+            predictions = (y_pred > 0.5).astype(int)
             
             # Precisión general
             accuracy = np.mean(predictions == y_test) * 100
