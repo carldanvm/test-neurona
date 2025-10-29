@@ -1,5 +1,6 @@
 from ImageProcessor import ImageProcessor
 from Neurona import Neurona
+from config import Config
 
 def showMenu():
     print("\n=== SISTEMA DE DETECCIÓN DE NEUMONÍA ===")
@@ -14,7 +15,7 @@ def train_neuron():
     """Entrenar la neurona con las imágenes procesadas"""
     try:
         neurona = Neurona()
-        epochs = int(input("Ingrese número de épocas (recomendado: 300): ") or "300")
+        epochs = int(input("Ingrese número de épocas (recomendado: 300): ") or Config.DEFAULT_EPOCHS)
         print(f"Entrenando neurona por {epochs} épocas...")
         neurona.train(epochs=epochs)
         print("¡Entrenamiento completado exitosamente!")

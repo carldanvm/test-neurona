@@ -2,48 +2,53 @@ import os
 from PIL import Image
 import numpy as np
 import json
+from ImageProcessor import ImageProcessor
+from config import Config
 
 class Neurona:
     def __init__(self):
-        self.training_data_dir = "imagenes-para-entrenar"
-        self.test_data_dir = "imagenes-para-test"
-        self.subdirectories = ["normal", "neumonia"]
-        self.model_dir = "neurona"
+        self.training_data_dir = Config.TRAINING_IMAGES_DIR ## Directorio de las imágenes para entrenar procesadas
+        self.test_data_dir = Config.TEST_IMAGES_DIR ## Directorio de las imágenes para testing
+        self.subdirectories = Config.SUBDIRECTORIES ## Subdirectorios de las carpetas de entrenamiento y testing
+        self.model_dir = Config.MODEL_DIR ## Directorio donde se guardara el modelo
         
         # Parámetros de la red neuronal
-        self.weights1 = None  # Pesos de capa de entrada a capa oculta
-        self.bias1 = None     # Bias de capa oculta
-        self.weights2 = None  # Pesos de capa oculta a capa de salida
-        self.bias2 = None     # Bias de capa de salida
-        self.learning_rate = 0.001
-        self.hidden_size = 60  # Número de neuronas en capa oculta
-        self.test_accuracy = None  # Precisión en datos de test
+        self.weights1 = None ## Pesos de capa de entrada a capa oculta
+        self.bias1 = None ## Bias de capa oculta
+        self.weights2 = None ## Pesos de capa oculta a capa de salida
+        self.bias2 = None ## Bias de capa de salida
+        self.learning_rate = Config.LEARNING_RATE ## Tasa de aprendizaje
+        self.hidden_size = Config.HIDDEN_LAYER_SIZE ## Número de neuronas en capa oculta
+        self.test_accuracy = None ## Precisión en datos de test
+        self.prediction_threshold = Config.PREDICTION_THRESHOLD ## Umbral de predicción
         
-        # Crear directorio para guardar modelo
+        # Instancia de ImageProcessor para procesamiento de imágenes
+        self.image_processor = ImageProcessor()
+        self.supported_formats = Config.SUPPORTED_FORMATS ## Formatos de las imágenes soportados
+        
+        # Crear directorio para guardar modelo si no existe
         os.makedirs(self.model_dir, exist_ok=True)
 
     def process_training_data(self, balance=True):
-        x = []  # Datos de imágenes
-        y = []  # Etiquetas (0 = normal, 1 = neumonia)
+        x = [] ## Datos de imágenes
+        y = [] ## Etiquetas (0 = normal, 1 = neumonia)
         
-        # Diccionario para almacenar imágenes por clase
+        ## Diccionario para almacenar imágenes por clase
         class_data = {0: [], 1: []}
         
         ## Convertir cada imagen en un array de intensidad de pixeles y normalizar a 0-1
-        for idx, subdirectory in enumerate(self.subdirectories):
+        for idx, subdirectory in enumerate(self.subdirectories): ## idx: 0=normal, 1=neumonia
             input_subdir = os.path.join(self.training_data_dir, subdirectory)
             print(f"Procesando directorio: {subdirectory}")
             
             for filename in os.listdir(input_subdir):
-                if any(filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.tif', '.webp']):
+                if any(filename.lower().endswith(ext) for ext in self.supported_formats): ## Filtrar solo imágenes válidas
                     input_path = os.path.join(input_subdir, filename)
                     try:
-                        image = Image.open(input_path)
-                        image_array = np.array(image)
-                        image_array = image_array / 255.0
-                        image_array = image_array.flatten()
-                        
-                        class_data[idx].append(image_array)
+                        # Procesar imagen usando ImageProcessor centralizado
+                        image_array = self.image_processor.process_image_for_prediction(input_path)
+                        if image_array is not None:
+                            class_data[idx].append(image_array) ## Agregar a la clase correspondiente
                         
                     except Exception as e:
                         print(f"Error procesando {input_path}: {e}")
@@ -52,29 +57,31 @@ class Neurona:
         
         # Balancear dataset si es necesario
         if balance:
-            min_samples = min(len(class_data[0]), len(class_data[1]))
+            min_samples = min(len(class_data[0]), len(class_data[1])) ## Encontrar la clase con menos imágenes
             print(f"Balanceando dataset a {min_samples} imágenes por clase...")
             
             #Tomar muestra aleatoria de la clase mayoritaria
-            np.random.seed(1)
+            np.random.seed(1) ## Semilla para reproducibilidad
             for class_idx in [0, 1]:
-                if len(class_data[class_idx]) > min_samples:
+                if len(class_data[class_idx]) > min_samples: ## Si esta clase tiene más imágenes que el mínimo
+                    # Generar índices aleatorios para seleccionar 'min_samples' imágenes
                     indices = np.random.choice(len(class_data[class_idx]), min_samples, replace=False)
+                    # Filtrar la lista manteniendo solo las imágenes en los índices seleccionados
                     class_data[class_idx] = [class_data[class_idx][i] for i in indices]
         
         # Combinar todas las imágenes
         for class_idx in [0, 1]:
             for image_array in class_data[class_idx]:
-                x.append(image_array)
-                y.append(class_idx)
+                x.append(image_array) ## Agregar imagen
+                y.append(class_idx) ## Agregar etiqueta correspondiente
         
         # Shuffle de los datos
         x = np.array(x)
         y = np.array(y)
         
-        shuffle_indices = np.random.permutation(len(x))
-        x = x[shuffle_indices]
-        y = y[shuffle_indices]
+        shuffle_indices = np.random.permutation(len(x)) ## Generar índices aleatorios
+        x = x[shuffle_indices] ## Mezclar imágenes
+        y = y[shuffle_indices] ## Mezclar etiquetas en el mismo orden
         
         print(f"Dataset final - Total: {len(x)}, Normal: {np.sum(y == 0)}, Neumonia: {np.sum(y == 1)}")
         
@@ -82,46 +89,49 @@ class Neurona:
     
     def sigmoid(self, z):
         """Función de activación sigmoid"""
-        # Evitar overflow
+        # Evitar overflow limitando z a un rango seguro
         z = np.clip(z, -500, 500)
+        # Calcular sigmoid: 1 / (1 + e^(-z))
         return 1 / (1 + np.exp(-z))
     
     def sigmoid_derivative(self, z):
         """Derivada de la función sigmoid"""
+        # Calcular sigmoid primero
         s = self.sigmoid(z)
+        # La derivada de sigmoid es: sigmoid(z) * (1 - sigmoid(z))
         return s * (1 - s)
     
     def initialize_parameters(self, input_size):
         """Inicializar pesos y bias aleatoriamente"""
         # Capa 1: input -> hidden (entrada a capa oculta)
+        # Inicialización Xavier/He: pesos aleatorios escalados por sqrt(2/n_entrada)
         self.weights1 = np.random.randn(input_size, self.hidden_size) * np.sqrt(2.0 / input_size)
+        # Bias de capa oculta inicializado en ceros
         self.bias1 = np.zeros((1, self.hidden_size))
         
         # Capa 2: hidden -> output (capa oculta a salida)
+        # Pesos de salida también con inicialización Xavier/He
         self.weights2 = np.random.randn(self.hidden_size, 1) * np.sqrt(2.0 / self.hidden_size)
+        # Bias de salida inicializado en cero (clasificación binaria)
         self.bias2 = 0.0
     
     def forward_propagation(self, X):
         """Propagación hacia adelante con capa oculta"""
         # Capa oculta
+        # Calcular entrada lineal: X * W1 + b1
         z1 = np.dot(X, self.weights1) + self.bias1
+        # Aplicar función de activación sigmoid
         a1 = self.sigmoid(z1)  # Activación de neuronas ocultas
         
         # Capa de salida
+        # Calcular entrada lineal de salida: a1 * W2 + b2
         z2 = np.dot(a1, self.weights2) + self.bias2
+        # Aplicar sigmoid para obtener probabilidad (0-1)
         a2 = self.sigmoid(z2)  # Predicción final
         
         # Guardamos valores intermedios para backpropagation
         cache = {'z1': z1, 'a1': a1, 'z2': z2, 'a2': a2}
         return cache
-    
-    def compute_cost(self, y_true, y_pred):
-        """Calcular función de costo (cross-entropy)"""
-        m = len(y_true)
-        # Evitar log(0)
-        y_pred = np.clip(y_pred, 1e-15, 1 - 1e-15)
-        cost = -1/m * np.sum(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
-        return cost
     
     def backward_propagation(self, X, y_true, cache):
         """Propagación hacia atrás con capa oculta"""
@@ -155,7 +165,7 @@ class Neurona:
         self.weights2 -= self.learning_rate * gradients['dw2']
         self.bias2 -= self.learning_rate * gradients['db2']
     
-    def train(self, epochs=1000):
+    def train(self, epochs=Config.DEFAULT_EPOCHS):
         """Entrenar la neurona"""
         print("Iniciando entrenamiento...")
         x, y = self.process_training_data(balance=True)
@@ -191,7 +201,7 @@ class Neurona:
     
     def calculate_accuracy(self, y_true, y_pred):
         """Calcular precisión del modelo"""
-        predictions = (y_pred > 0.5).astype(int)
+        predictions = (y_pred > self.prediction_threshold).astype(int)
         accuracy = np.mean(predictions == y_true) * 100
         return accuracy
     
@@ -243,21 +253,17 @@ class Neurona:
                 raise ValueError("No hay modelo entrenado. Entrena primero o carga un modelo.")
         
         try:
-            # Procesar imagen igual que en entrenamiento
-            image = Image.open(image_path)
-            # IMPORTANTE: Redimensionar al mismo tamaño que el entrenamiento
-            resized_image = image.resize((200, 200))  # Mismo tamaño que ImageProcessor
-            processed_image = resized_image.convert("L")  # Convertir a escala de grises
-            
-            image_array = np.array(processed_image)
-            image_array = image_array / 255.0
-            image_array = image_array.flatten().reshape(1, -1)
+            # Procesar imagen usando ImageProcessor centralizado
+            image_array = self.image_processor.process_image_for_prediction(image_path)
+            if image_array is None:
+                return None
+            image_array = image_array.reshape(1, -1)
             
             # Predecir
             cache = self.forward_propagation(image_array)
             prediction = cache['a2'][0][0]
             
-            class_name = "NEUMONIA" if prediction > 0.5 else "NORMAL"
+            class_name = "NEUMONIA" if prediction > self.prediction_threshold else "NORMAL"
             
             return {
                 'class': class_name,
@@ -286,7 +292,7 @@ class Neurona:
                 
                 # Listar todas las imágenes
                 all_files = [f for f in os.listdir(test_subdir) 
-                           if any(f.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.tif', '.webp'])]
+                           if any(f.lower().endswith(ext) for ext in self.supported_formats)]
                 
                 # Tomar muestra aleatoria (máximo max_samples)
                 np.random.seed(1)  # Para reproducibilidad
@@ -300,17 +306,11 @@ class Neurona:
                 for filename in selected_files:
                     test_path = os.path.join(test_subdir, filename)
                     try:
-                        image = Image.open(test_path)
-                        # IMPORTANTE: Procesar igual que en entrenamiento y predicción
-                        resized_image = image.resize((200, 200))  # Mismo tamaño que ImageProcessor
-                        processed_image = resized_image.convert("L")  # Convertir a escala de grises
-                        
-                        image_array = np.array(processed_image)
-                        image_array = image_array / 255.0
-                        image_array = image_array.flatten()
-                        
-                        test_data[idx].append(image_array)
-                        test_labels[idx].append(idx)
+                        # Procesar imagen usando ImageProcessor centralizado
+                        image_array = self.image_processor.process_image_for_prediction(test_path)
+                        if image_array is not None:
+                            test_data[idx].append(image_array)
+                            test_labels[idx].append(idx)
                     except Exception as e:
                         print(f"  Error procesando {test_path}: {e}")
             
@@ -341,7 +341,7 @@ class Neurona:
             y_pred = cache['a2'].flatten()
             
             # Calcular métricas
-            predictions = (y_pred > 0.5).astype(int)
+            predictions = (y_pred > self.prediction_threshold).astype(int)
             
             # Precisión general
             accuracy = np.mean(predictions == y_test) * 100
