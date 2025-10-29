@@ -1,7 +1,7 @@
 from ImageProcessor import ImageProcessor
 from Neurona import Neurona
 from config import Config
-
+from time import sleep
 def showMenu():
     print("\n=== SISTEMA DE DETECCIÓN DE NEUMONÍA ===")
     print("1. Procesar imágenes")
@@ -26,21 +26,35 @@ def make_prediction():
     """Hacer predicción sobre una imagen"""
     try:
         neurona = Neurona()
-        image_path = input("Ingrese la ruta de la imagen: ").strip()
         
-        if not image_path:
-            print("Ruta de imagen no válida")
-            return
-            
-        print("Analizando imagen...")
-        resultado = neurona.predict(image_path)
+        print("\n=== MODO PREDICCIÓN ===")
+        print("Ingrese rutas de imágenes para analizar")
+        print("Escriba '0' para volver al menú principal")
+        print("-" * 40)
         
-        if resultado:
-            print(f"\n=== RESULTADO ===")
-            print(f"Predicción: {resultado['class']}")
-        else:
-            print("No se pudo procesar la imagen")
+        while True:
+            image_path = input("\nIngrese la ruta de la imagen (0 para salir): ").strip()
             
+            # Salir si ingresa 0
+            if image_path == "0":
+                print("Volviendo al menú principal...")
+                break
+                
+            # Validar que no esté vacío
+            if not image_path:
+                print("Ruta de imagen no válida. Intente de nuevo.")
+                continue
+                
+            print("Analizando imagen...")
+            sleep(2)
+            resultado = neurona.predict(image_path)
+            
+            if resultado:
+                print(f"\n\n=== RESULTADO ===")
+                print(f"Predicción: {resultado['class']}")
+            else:
+                print("No se pudo procesar la imagen. Verifique la ruta.")
+                
     except Exception as e:
         print(f"Error durante la predicción: {e}")
 

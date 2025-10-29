@@ -1,5 +1,4 @@
 import os
-from PIL import Image
 import numpy as np
 import json
 from ImageProcessor import ImageProcessor
@@ -30,8 +29,8 @@ class Neurona:
         os.makedirs(self.model_dir, exist_ok=True)
 
     def process_training_data(self, balance=True):
-        x = [] ## Datos de imágenes
-        y = [] ## Etiquetas (0 = normal, 1 = neumonia)
+        images_data = [] ## Datos de imágenes
+        labels_data = [] ## Etiquetas (0 = normal, 1 = neumonia)
         
         ## Diccionario para almacenar imágenes por clase
         class_data = {0: [], 1: []}
@@ -72,39 +71,39 @@ class Neurona:
         # Combinar todas las imágenes
         for class_idx in [0, 1]:
             for image_array in class_data[class_idx]:
-                x.append(image_array) ## Agregar imagen
-                y.append(class_idx) ## Agregar etiqueta correspondiente
+                images_data.append(image_array) ## Agregar imagen
+                labels_data.append(class_idx) ## Agregar etiqueta correspondiente
         
         # Shuffle de los datos
-        x = np.array(x)
-        y = np.array(y)
+        images_data = np.array(images_data)
+        labels_data = np.array(labels_data)
         
-        shuffle_indices = np.random.permutation(len(x)) ## Generar índices aleatorios
-        x = x[shuffle_indices] ## Mezclar imágenes
-        y = y[shuffle_indices] ## Mezclar etiquetas en el mismo orden
+        shuffle_indices = np.random.permutation(len(images_data)) ## Generar índices aleatorios
+        images_data = images_data[shuffle_indices] ## Mezclar imágenes
+        labels_data = labels_data[shuffle_indices] ## Mezclar etiquetas en el mismo orden
         
-        print(f"Dataset final - Total: {len(x)}, Normal: {np.sum(y == 0)}, Neumonia: {np.sum(y == 1)}")
+        print(f"Dataset final - Total: {len(images_data)}, Normal: {np.sum(labels_data == 0)}, Neumonia: {np.sum(labels_data == 1)}")
         
-        return x, y
+        return images_data, labels_data
     
-    def sigmoid(self, z):
+    def sigmoid(self, linear_input):
         """Función de activación sigmoid"""
-        # Evitar overflow limitando z a un rango seguro
-        z = np.clip(z, -500, 500)
-        # Calcular sigmoid: 1 / (1 + e^(-z))
-        return 1 / (1 + np.exp(-z))
+        # Evitar overflow limitando la entrada lineal a un rango seguro
+        linear_input = np.clip(linear_input, -500, 500)
+        # Calcular sigmoid: 1 / (1 + e^(-entrada_lineal))
+        return 1 / (1 + np.exp(-linear_input))
     
-    def sigmoid_derivative(self, z):
+    def sigmoid_derivative(self, linear_input):
         """Derivada de la función sigmoid"""
         # Calcular sigmoid primero
-        s = self.sigmoid(z)
-        # La derivada de sigmoid es: sigmoid(z) * (1 - sigmoid(z))
-        return s * (1 - s)
+        sigmoid_value = self.sigmoid(linear_input)
+        # La derivada de sigmoid es: sigmoid(entrada) * (1 - sigmoid(entrada))
+        return sigmoid_value * (1 - sigmoid_value)
     
     def initialize_parameters(self, input_size):
         """Inicializar pesos y bias aleatoriamente"""
         # Capa 1: input -> hidden (entrada a capa oculta)
-        # Inicialización Xavier/He: pesos aleatorios escalados por sqrt(2/n_entrada)
+        # Inicialización, con metodo Xavier/He
         self.weights1 = np.random.randn(input_size, self.hidden_size) * np.sqrt(2.0 / input_size)
         # Bias de capa oculta inicializado en ceros
         self.bias1 = np.zeros((1, self.hidden_size))
@@ -112,81 +111,92 @@ class Neurona:
         # Capa 2: hidden -> output (capa oculta a salida)
         # Pesos de salida también con inicialización Xavier/He
         self.weights2 = np.random.randn(self.hidden_size, 1) * np.sqrt(2.0 / self.hidden_size)
-        # Bias de salida inicializado en cero (clasificación binaria)
+        # Bias de salida inicializado en cero
         self.bias2 = 0.0
     
-    def forward_propagation(self, X):
+    def forward_propagation(self, input_images):
         """Propagación hacia adelante con capa oculta"""
         # Capa oculta
-        # Calcular entrada lineal: X * W1 + b1
-        z1 = np.dot(X, self.weights1) + self.bias1
+        # Calcular entrada lineal: imagenes * pesos_capa1 + bias_capa1
+        hidden_linear = np.dot(input_images, self.weights1) + self.bias1
         # Aplicar función de activación sigmoid
-        a1 = self.sigmoid(z1)  # Activación de neuronas ocultas
+        hidden_activation = self.sigmoid(hidden_linear)  # Activación de neuronas ocultas
         
         # Capa de salida
-        # Calcular entrada lineal de salida: a1 * W2 + b2
-        z2 = np.dot(a1, self.weights2) + self.bias2
+        # Calcular entrada lineal de salida: activacion_oculta * pesos_salida + bias_salida
+        output_linear = np.dot(hidden_activation, self.weights2) + self.bias2
         # Aplicar sigmoid para obtener probabilidad (0-1)
-        a2 = self.sigmoid(z2)  # Predicción final
+        output_activation = self.sigmoid(output_linear)  # Predicción final
         
-        # Guardamos valores intermedios para backpropagation
-        cache = {'z1': z1, 'a1': a1, 'z2': z2, 'a2': a2}
+        # Guardamos valores para backpropagation
+        cache = {
+            'hidden_linear': hidden_linear, 
+            'hidden_activation': hidden_activation, 
+            'output_linear': output_linear, 
+            'output_activation': output_activation
+        }
         return cache
     
-    def backward_propagation(self, X, y_true, cache):
+    def backward_propagation(self, input_images, true_labels, cache):
         """Propagación hacia atrás con capa oculta"""
-        m = len(y_true)
+        num_samples = len(true_labels)
         
         # Extraer valores del cache
-        a1 = cache['a1']
-        a2 = cache['a2']
+        hidden_activation = cache['hidden_activation']
+        output_activation = cache['output_activation']
         
-        # Reshape y_true para operaciones
-        y_true = y_true.reshape(-1, 1)
+        # Reshape true_labels para operaciones
+        true_labels = true_labels.reshape(-1, 1)
         
         # Gradientes de capa de salida
-        dz2 = a2 - y_true
-        dw2 = 1/m * np.dot(a1.T, dz2)
-        db2 = 1/m * np.sum(dz2)
+        output_error = output_activation - true_labels
+        weights2_gradient = 1/num_samples * np.dot(hidden_activation.T, output_error)
+        bias2_gradient = 1/num_samples * np.sum(output_error)
         
         # Gradientes de capa oculta
-        da1 = np.dot(dz2, self.weights2.T)
-        dz1 = da1 * a1 * (1 - a1)  # Derivada de sigmoid
-        dw1 = 1/m * np.dot(X.T, dz1)
-        db1 = 1/m * np.sum(dz1, axis=0, keepdims=True)
+        hidden_error_signal = np.dot(output_error, self.weights2.T)
+        hidden_error = hidden_error_signal * hidden_activation * (1 - hidden_activation)  # Derivada de sigmoid
+        weights1_gradient = 1/num_samples * np.dot(input_images.T, hidden_error)
+        bias1_gradient = 1/num_samples * np.sum(hidden_error, axis=0, keepdims=True)
         
-        gradients = {'dw1': dw1, 'db1': db1, 'dw2': dw2, 'db2': db2}
+        gradients = {
+            'weights1_gradient': weights1_gradient, 
+            'bias1_gradient': bias1_gradient, 
+            'weights2_gradient': weights2_gradient, 
+            'bias2_gradient': bias2_gradient
+        }
         return gradients
     
     def update_parameters(self, gradients):
         """Actualizar pesos y bias de todas las capas"""
-        self.weights1 -= self.learning_rate * gradients['dw1']
-        self.bias1 -= self.learning_rate * gradients['db1']
-        self.weights2 -= self.learning_rate * gradients['dw2']
-        self.bias2 -= self.learning_rate * gradients['db2']
+        self.weights1 -= self.learning_rate * gradients['weights1_gradient']
+        self.bias1 -= self.learning_rate * gradients['bias1_gradient']
+        self.weights2 -= self.learning_rate * gradients['weights2_gradient']
+        self.bias2 -= self.learning_rate * gradients['bias2_gradient']
     
     def train(self, epochs=Config.DEFAULT_EPOCHS):
         """Entrenar la neurona"""
         print("Iniciando entrenamiento...")
-        x, y = self.process_training_data(balance=True)
+        training_images, training_labels = self.process_training_data(balance=True)
         
         # Inicializar parámetros
-        self.initialize_parameters(x.shape[1])
+        self.initialize_parameters(training_images.shape[1])
         
+        # Entrenar la neurona por el numero de épocas
         for epoch in range(epochs):
             # Forward propagation
-            cache = self.forward_propagation(x)
-            y_pred = cache['a2'].flatten()
+            cache = self.forward_propagation(training_images)
+            predictions = cache['output_activation'].flatten()
             
             # Backward propagation
-            gradients = self.backward_propagation(x, y, cache)
+            gradients = self.backward_propagation(training_images, training_labels, cache)
             
             # Actualizar parámetros
             self.update_parameters(gradients)
             
             # Mostrar progreso cada 100 épocas
             if epoch % 100 == 0:
-                accuracy = self.calculate_accuracy(y, y_pred)
+                accuracy = self.calculate_accuracy(training_labels, predictions)
                 print(f"Época {epoch}: Precisión = {accuracy:.2f}%")
         
         # Guardar modelo al finalizar
@@ -199,10 +209,12 @@ class Neurona:
         print("="*50)
         self.test_model()
     
-    def calculate_accuracy(self, y_true, y_pred):
+    def calculate_accuracy(self, true_labels, predicted_probabilities):
         """Calcular precisión del modelo"""
-        predictions = (y_pred > self.prediction_threshold).astype(int)
-        accuracy = np.mean(predictions == y_true) * 100
+        # Convertir predicciones a 0-1
+        binary_predictions = (predicted_probabilities > self.prediction_threshold).astype(int)
+        # Calcular precisión
+        accuracy = np.mean(binary_predictions == true_labels) * 100
         return accuracy
     
     
@@ -218,6 +230,7 @@ class Neurona:
             'test_accuracy': self.test_accuracy
         }
         
+        # Guardar modelo en JSON
         neuron_path = os.path.join(self.model_dir, 'neuron_parameters.json')
         with open(neuron_path, 'w') as f:
             json.dump(neuron_data, f, indent=2)
@@ -228,6 +241,7 @@ class Neurona:
         """Cargar parámetros del modelo"""
         neuron_path = os.path.join(self.model_dir, 'neuron_parameters.json')
         
+        # Cargar modelo desde JSON
         if os.path.exists(neuron_path):
             with open(neuron_path, 'r') as f:
                 neuron_data = json.load(f)
@@ -261,8 +275,9 @@ class Neurona:
             
             # Predecir
             cache = self.forward_propagation(image_array)
-            prediction = cache['a2'][0][0]
+            prediction = cache['output_activation'][0][0]
             
+            # Interpretar la prediccion, mayor a threshold es neumonia, menor es normal
             class_name = "NEUMONIA" if prediction > self.prediction_threshold else "NORMAL"
             
             return {
@@ -281,7 +296,9 @@ class Neurona:
             test_data = {0: [], 1: []}  # 0: normal, 1: neumonia
             test_labels = {0: [], 1: []}
             
+            # Recorrer subdirectorios
             for idx, subdirectory in enumerate(self.subdirectories):
+                # Directorio de imagenes de test
                 test_subdir = os.path.join(self.test_data_dir, subdirectory)
                 
                 if not os.path.exists(test_subdir):
@@ -294,21 +311,26 @@ class Neurona:
                 all_files = [f for f in os.listdir(test_subdir) 
                            if any(f.lower().endswith(ext) for ext in self.supported_formats)]
                 
-                # Tomar muestra aleatoria (máximo max_samples)
+                # Tomar muestra aleatoria
                 np.random.seed(1)  # Para reproducibilidad
+                
+                # Si hay mas archivos que max_samples, tomar una muestra aleatoria
                 if len(all_files) > max_samples:
                     selected_files = np.random.choice(all_files, max_samples, replace=False)
+                # Si hay menos archivos que max_samples, tomar todos los archivos
                 else:
                     selected_files = all_files
                 
                 print(f"  Procesando {len(selected_files)} imágenes de {subdirectory}...")
                 
+                # Procesar cada imagen
                 for filename in selected_files:
                     test_path = os.path.join(test_subdir, filename)
                     try:
                         # Procesar imagen usando ImageProcessor centralizado
                         image_array = self.image_processor.process_image_for_prediction(test_path)
                         if image_array is not None:
+                            # Añadir a los datos de test
                             test_data[idx].append(image_array)
                             test_labels[idx].append(idx)
                     except Exception as e:
@@ -324,37 +346,37 @@ class Neurona:
             print(f"\nUsando {min_samples} imágenes de cada clase para testing")
             
             # Combinar datos
-            x_test = []
-            y_test = []
+            test_images = []
+            test_labels = []
             
             for class_idx in [0, 1]:
                 for i in range(min_samples):
-                    x_test.append(test_data[class_idx][i])
-                    y_test.append(class_idx)
+                    test_images.append(test_data[class_idx][i])
+                    test_labels.append(class_idx)
             
-            x_test = np.array(x_test)
-            y_test = np.array(y_test)
+            test_images = np.array(test_images)
+            test_labels = np.array(test_labels)
             
             # Hacer predicciones
-            print(f"\nRealizando predicciones en {len(x_test)} imágenes de test...")
-            cache = self.forward_propagation(x_test)
-            y_pred = cache['a2'].flatten()
+            print(f"\nRealizando predicciones en {len(test_images)} imágenes de test...")
+            cache = self.forward_propagation(test_images)
+            predicted_probabilities = cache['output_activation'].flatten()
             
             # Calcular métricas
-            predictions = (y_pred > self.prediction_threshold).astype(int)
+            binary_predictions = (predicted_probabilities > self.prediction_threshold).astype(int)
             
             # Precisión general
-            accuracy = np.mean(predictions == y_test) * 100
+            accuracy = np.mean(binary_predictions == test_labels) * 100
             
             # Precisión por clase
-            normal_mask = y_test == 0
-            pneumonia_mask = y_test == 1
+            normal_mask = test_labels == 0
+            pneumonia_mask = test_labels == 1
             
-            normal_correct = np.sum(predictions[normal_mask] == 0)
+            normal_correct = np.sum(binary_predictions[normal_mask] == 0)
             normal_total = np.sum(normal_mask)
             normal_accuracy = (normal_correct / normal_total * 100) if normal_total > 0 else 0
             
-            pneumonia_correct = np.sum(predictions[pneumonia_mask] == 1)
+            pneumonia_correct = np.sum(binary_predictions[pneumonia_mask] == 1)
             pneumonia_total = np.sum(pneumonia_mask)
             pneumonia_accuracy = (pneumonia_correct / pneumonia_total * 100) if pneumonia_total > 0 else 0
             
@@ -365,7 +387,7 @@ class Neurona:
             print("\n" + "="*50)
             print("RESULTADOS EN DATOS DE TEST")
             print("="*50)
-            print(f"Total de imágenes evaluadas: {len(x_test)}")
+            print(f"Total de imágenes evaluadas: {len(test_images)}")
             print(f"  - Imágenes normales: {normal_total}")
             print(f"  - Imágenes con neumonía: {pneumonia_total}")
             print("\n" + "-"*50)
