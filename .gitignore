@@ -1,7 +1,7 @@
 imagenes-sin-procesar/*
 !imagenes-sin-procesar/.gitkeep
-imagenes-para-test/*
-!imagenes-para-test/.gitkeep
+imagenes-para-testing/*
+!imagenes-para-testing/.gitkeep
 imagenes-para-entrenar/*
 !imagenes-para-entrenar/.gitkeep
 __pycache__
