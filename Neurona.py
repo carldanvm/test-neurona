@@ -6,7 +6,7 @@ import json
 class Neurona:
     def __init__(self):
         self.training_data_dir = "imagenes-para-entrenar"
-        self.test_data_dir = "test"
+        self.test_data_dir = "imagenes-para-test"
         self.subdirectories = ["normal", "neumonia"]
         self.model_dir = "neurona"
         
