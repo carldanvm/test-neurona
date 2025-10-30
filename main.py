@@ -1,7 +1,7 @@
 from ImageProcessor import ImageProcessor
 from Neurona import Neurona
 from config import Config
-from time import sleep
+import sys
 def showMenu():
     print("\n=== SISTEMA DE DETECCIÓN DE NEUMONÍA ===")
     print("1. Procesar imágenes")
@@ -46,7 +46,7 @@ def make_prediction():
                 continue
                 
             print("Analizando imagen...")
-            sleep(2)
+
             resultado = neurona.predict(image_path)
             
             if resultado:
@@ -58,7 +58,8 @@ def make_prediction():
     except Exception as e:
         print(f"Error durante la predicción: {e}")
 
-def main():
+def main_cli():
+    """Interfaz de línea de comandos"""
     option = showMenu()
     while option != 4:
         if option == 1:
@@ -78,6 +79,21 @@ def main():
             
         input("\nPresione Enter para continuar...")
         option = showMenu()
+
+def main():
+    """Punto de entrada principal - lanza GUI por defecto"""
+    # Si se pasa --cli como argumento, usar interfaz de línea de comandos
+    if len(sys.argv) > 1 and sys.argv[1] == '--cli':
+        main_cli()
+    else:
+        # Lanzar interfaz gráfica
+        try:
+            from gui import main as gui_main
+            gui_main()
+        except ImportError as e:
+            print(f"Error al importar GUI: {e}")
+            print("Iniciando interfaz de línea de comandos...")
+            main_cli()
 
 if __name__ == "__main__":
     main()
