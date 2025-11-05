@@ -24,7 +24,7 @@ test-neurona/
 ├── neurona/             # Modelo entrenado (se genera automáticamente)
 ├── imagenes-para-entrenar/     # Imágenes procesadas para entrenamiento
 ├── imagenes-para-testing/      # Imágenes para evaluación
-└── imagenes-sin-procesar/      # Imágenes originales
+└── imagenes-para-entrenar-sin-procesar/      # Imágenes originales
 ```
 
 ## 🛠️ Tecnologías Utilizadas

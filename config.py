@@ -1,6 +1,6 @@
 class Config:
     TRAINING_IMAGES_DIR = "imagenes-para-entrenar" ## directorio donde se guardan las imágenes para entrenar, tamaño ajustado y en escala de grises
-    RAW_TRAINING_IMAGES_DIR = "imagenes-sin-procesar" ## directorio donde se guardan las imágenes para entrenar originales
+    RAW_TRAINING_IMAGES_DIR = "imagenes-para-entrenar-sin-procesar" ## directorio donde se guardan las imágenes para entrenar originales
     TEST_IMAGES_DIR = "imagenes-para-testing" ## directorio donde se guardan las imágenes para testing originales
     SUBDIRECTORIES = ["normal", "neumonia"] ## subdirectorios de las carpetas de entrenamiento y testing
     MODEL_DIR = "neurona" ## directorio donde se guardan los pesos de la neurona
