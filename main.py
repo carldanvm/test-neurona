@@ -1,7 +1,7 @@
 from gui import main as gui_main
 
 def main():
-    ##Iniciar interface grafica
+    ##Iniciar interfaz grafica
     gui_main()
 
 if __name__ == "__main__":
