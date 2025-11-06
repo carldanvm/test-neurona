@@ -37,20 +37,19 @@ class NeuronaGUI:
     def setup_styles(self):
         """Configurar estilos de ttk"""
         style = ttk.Style()
-        # Forzar 'clam' para permitir colorear botones de forma consistente
+        # Escoger tema a usar
         style.theme_use('clam')
         
-        # Base backgrounds
+        # Colores de fondo
         style.configure('TFrame', background='#F8FAFC')
         style.configure('TLabelframe', background='#F8FAFC')
         style.configure('TLabelframe.Label', background='#F8FAFC', foreground='#0F172A', font=('Segoe UI', 10, 'bold'))
         style.configure('TLabel', background='#F8FAFC', foreground='#0F172A', font=('Segoe UI', 10))
 
-        # Card-like labelframes
         style.configure('Card.TLabelframe', background='#FFFFFF', borderwidth=1, relief='solid')
         style.configure('Card.TLabelframe.Label', background='#FFFFFF', foreground='#0F172A', font=('Segoe UI', 10, 'bold'))
 
-        # Buttons
+        # Estilo de los botones
         style.configure('Primary.TButton',
                         background='#10B981',
                         foreground='white',
@@ -73,7 +72,7 @@ class NeuronaGUI:
                   background=[('active', '#1D4ED8'), ('pressed', '#1E3A8A'), ('disabled', '#60A5FA')],
                   foreground=[('active', '#FFFFFF'), ('pressed', '#FFFFFF'), ('disabled', '#FFFFFF')])
 
-        # Progressbar
+        # Barra de carga
         style.configure('Modern.Horizontal.TProgressbar',
                         troughcolor='#E5E7EB',
                         background='#2563EB',
@@ -507,6 +506,3 @@ def main():
     
     app = NeuronaGUI(root)
     root.mainloop()
-
-if __name__ == "__main__":
-    main()

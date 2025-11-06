@@ -3,7 +3,7 @@ class Config:
     RAW_TRAINING_IMAGES_DIR = "imagenes-para-entrenar-sin-procesar" ## directorio donde se guardan las imágenes para entrenar originales
     TEST_IMAGES_DIR = "imagenes-para-testing" ## directorio donde se guardan las imágenes para testing originales
     SUBDIRECTORIES = ["normal", "neumonia"] ## subdirectorios de las carpetas de entrenamiento y testing
-    MODEL_DIR = "neurona" ## directorio donde se guardan los pesos de la neurona
+    MODEL_DIR = "neurona" ## directorio donde se guardan los parametros de la neurona
     SUPPORTED_FORMATS = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.tif', '.webp'] ## formatos de las imágenes soportados
     MAX_TEST_SAMPLES = 1000 ## número máximo de imágenes para testing usado para calcular la precisión real
 
