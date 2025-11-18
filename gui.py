@@ -11,10 +11,10 @@ class NeuronaGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Sistema de Detección de Neumonía")
-        self.root.geometry("1000x700")
+        self.root.geometry("900x600")
         self.root.configure(bg='#F8FAFC')
         self.root.resizable(True, True)
-        self.root.minsize(950, 650)
+        self.root.minsize(800, 500)
         try:
             # Maximizar ventana por defecto en Windows
             self.root.state('zoomed')
@@ -82,31 +82,59 @@ class NeuronaGUI:
         
     def create_widgets(self):
         """Crear todos los widgets de la interfaz"""
-        # Frame principal
-        main_frame = ttk.Frame(self.root, padding="20")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Crear canvas y scrollbar para hacer la interfaz scrolleable
+        canvas = tk.Canvas(self.root, bg='#F8FAFC', highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
+        
+        # Frame principal dentro del canvas
+        main_frame = ttk.Frame(canvas, padding="15")
+        
+        # Configurar scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Posicionar canvas y scrollbar
+        canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        
+        # Crear ventana en el canvas
+        canvas_frame = canvas.create_window((0, 0), window=main_frame, anchor="nw")
         
         # Configurar grid
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
         
+        # Función para actualizar el scrollregion
+        def configure_scroll_region(event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            # Ajustar el ancho del frame al ancho del canvas
+            canvas_width = canvas.winfo_width()
+            canvas.itemconfig(canvas_frame, width=canvas_width)
+        
+        main_frame.bind("<Configure>", configure_scroll_region)
+        canvas.bind("<Configure>", configure_scroll_region)
+        
+        # Habilitar scroll con rueda del mouse
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
+        
         # Título
         title_label = tk.Label(main_frame, 
                               text="Sistema de Detección de Neumonía",
-                              font=('Segoe UI', 22, 'bold'),
+                              font=('Segoe UI', 16, 'bold'),
                               bg='#F8FAFC',
                               fg='#0F172A')
-        title_label.grid(row=0, column=0, pady=(0, 20))
+        title_label.grid(row=0, column=0, pady=(0, 10))
         
         # Frame de información de neurona
-        neuron_info_frame = ttk.LabelFrame(main_frame, text="Estado de la Neurona", padding="10", style='Card.TLabelframe')
-        neuron_info_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        neuron_info_frame = ttk.LabelFrame(main_frame, text="Estado de la Neurona", padding="8", style='Card.TLabelframe')
+        neuron_info_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 8))
         neuron_info_frame.columnconfigure(0, weight=1)
         
         self.neuron_info_text = tk.Text(neuron_info_frame,
-                                        height=3,
-                                        font=('Segoe UI', 10),
+                                        height=2,
+                                        font=('Segoe UI', 9),
                                         wrap=tk.WORD,
                                         state='disabled',
                                         bg='#FFFFFF',
@@ -116,8 +144,8 @@ class NeuronaGUI:
         self.neuron_info_text.pack()
         
         # Frame de botones de procesamiento
-        buttons_frame = ttk.LabelFrame(main_frame, text="Operaciones", padding="10", style='Card.TLabelframe')
-        buttons_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 20))
+        buttons_frame = ttk.LabelFrame(main_frame, text="Operaciones", padding="8", style='Card.TLabelframe')
+        buttons_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 8))
         buttons_frame.columnconfigure(0, weight=1)
         
         # Botón entrenar
@@ -129,8 +157,8 @@ class NeuronaGUI:
         self.train_btn.grid(row=0, column=0, padx=5, pady=5, sticky=(tk.W, tk.E))
         
         # Frame de predicción
-        prediction_frame = ttk.LabelFrame(main_frame, text="Predicción", padding="10", style='Card.TLabelframe')
-        prediction_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        prediction_frame = ttk.LabelFrame(main_frame, text="Predicción", padding="8", style='Card.TLabelframe')
+        prediction_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(0, 8))
         prediction_frame.columnconfigure(0, weight=1)
         
         # Botón para realizar predicción (abre modal de selección)
@@ -139,7 +167,7 @@ class NeuronaGUI:
                                                 style='Predict.TButton',
                                                 command=self.show_prediction_modal,
                                                 cursor='hand2')
-        self.open_predict_modal_btn.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        self.open_predict_modal_btn.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 8))
         
         # Frame para imagen y resultado
         result_container = ttk.Frame(prediction_frame)
@@ -151,20 +179,20 @@ class NeuronaGUI:
         image_frame = ttk.LabelFrame(result_container, text="Imagen", padding="5", style='Card.TLabelframe')
         image_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 5))
         
-        # Canvas de tamaño fijo para mantener el layout estable
-        self.image_canvas = tk.Canvas(image_frame, width=500, height=500, bg='white', highlightthickness=0, bd=0, relief='flat')
+        # Canvas de tamaño reducido para mejor responsividad
+        self.image_canvas = tk.Canvas(image_frame, width=350, height=350, bg='white', highlightthickness=0, bd=0, relief='flat')
         self.image_canvas.pack()
         # Texto por defecto cuando no hay imagen
-        self.image_canvas.create_text(250, 250, text="Sin imagen", fill="#999999", font=('Segoe UI', 12))
+        self.image_canvas.create_text(175, 175, text="Sin imagen", fill="#999999", font=('Segoe UI', 11))
         
         # Frame para resultado
         result_frame = ttk.LabelFrame(result_container, text="Resultado", padding="5", style='Card.TLabelframe')
         result_frame.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(5, 0))
         
         self.result_text = tk.Text(result_frame, 
-                                  height=12,
-                                  width=30,
-                                  font=('Segoe UI', 11),
+                                  height=10,
+                                  width=25,
+                                  font=('Segoe UI', 10),
                                   wrap=tk.WORD,
                                   state='disabled',
                                   bg='#FFFFFF',
@@ -180,11 +208,11 @@ class NeuronaGUI:
                                      style='Predict.TButton',
                                      cursor='hand2',
                                      state='disabled')
-        self.predict_btn.grid(row=2, column=0, pady=(10, 0), sticky=(tk.W, tk.E))
+        self.predict_btn.grid(row=2, column=0, pady=(8, 0), sticky=(tk.W, tk.E))
         
         # Barra de progreso
         self.progress = ttk.Progressbar(main_frame, mode='indeterminate', style='Modern.Horizontal.TProgressbar')
-        self.progress.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=(5, 0))
+        self.progress.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=(8, 10))
         
     def setup_drag_drop(self):
         """Inicialización posterior a widgets (sin drag & drop)"""
@@ -312,15 +340,15 @@ class NeuronaGUI:
         try:
             self.current_image_path = filepath
             
-            # Cargar imagen y ajustarla para caber en el canvas (500x500) manteniendo proporciones
+            # Cargar imagen y ajustarla para caber en el canvas (350x350) manteniendo proporciones
             img = Image.open(filepath)
             img = img.convert('RGB')
-            img.thumbnail((500, 500), Image.Resampling.LANCZOS)
+            img.thumbnail((350, 350), Image.Resampling.LANCZOS)
             self._img_photo = ImageTk.PhotoImage(img)
             
             # Limpiar canvas y dibujar imagen centrada
             self.image_canvas.delete("all")
-            self.image_canvas.create_image(250, 250, image=self._img_photo)
+            self.image_canvas.create_image(175, 175, image=self._img_photo)
             
             # Habilitar botón de predicción
             self.predict_btn.configure(state='normal')
