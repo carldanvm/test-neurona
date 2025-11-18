@@ -1,8 +1,12 @@
 imagenes-para-entrenar-sin-procesar/*
 !imagenes-para-entrenar-sin-procesar/.gitkeep
+
 imagenes-para-testing/*
 !imagenes-para-testing/.gitkeep
+
 imagenes-para-entrenar/*
 !imagenes-para-entrenar/.gitkeep
+
 dataset-neumonia.rar
+
 __pycache__
