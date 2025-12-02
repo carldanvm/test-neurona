@@ -92,7 +92,7 @@ class NeuronaGUI:
         self.result_label.grid(row=0, column=0, padx=20, pady=20, sticky="w")
         
         # Botón Analizar
-        self.predict_btn = ctk.CTkButton(self.action_frame, text="ANALIZAR IMAGEN", 
+        self.predict_btn = ctk.CTkButton(self.action_frame, text="Analizar Imagen", 
                                          font=ctk.CTkFont(size=15, weight="bold"),
                                          height=40,
                                          state="disabled",
@@ -142,7 +142,7 @@ class NeuronaGUI:
             self.image_label.configure(image=self.current_ctk_image, text="")
             
             # Habilitar botón (Color Verde llamativo)
-            self.predict_btn.configure(state="normal", fg_color="#2CC985", hover_color="#25A96F", text_color="white") 
+            self.predict_btn.configure(state="normal", fg_color="#1a8f5e", hover_color="#156b47", text_color="white")
             
             # Resetear resultado
             self.result_label.configure(text="Imagen cargada. Lista para análisis.", text_color=("gray50", "gray70"))
